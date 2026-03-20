@@ -210,6 +210,8 @@ class LucidNFT_SM_KSampler(io.ComfyNode):
         dual_condition_model=model["dual_condition_branch"].to(device)
         height, width = condition["height"], condition["width"]
         model=model["model"]
+        if not  model.block_offload:
+            model.to(device)
         condition["guidance"]=cfg
         condition["timesteps"]=get_schedule(steps,(width // 8) * (height // 8) // (16 * 16),shift=(not model.is_schnell),)
         # denoise
