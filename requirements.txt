@@ -1,0 +1,16 @@
+accelerate
+diffusers
+einops
+huggingface_hub
+matplotlib
+numpy
+opencv-python
+peft
+Pillow
+requests
+safetensors
+sentencepiece
+timm
+tqdm
+transformers
+qwen-vl-utils

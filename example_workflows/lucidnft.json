@@ -1,0 +1,536 @@
+{
+  "id": "bf49c21d-212c-4922-af95-9ab51ad3c8c3",
+  "revision": 0,
+  "last_node_id": 15,
+  "last_link_id": 18,
+  "nodes": [
+    {
+      "id": 6,
+      "type": "PreviewImage",
+      "pos": [
+        20469.72014028796,
+        -472.68155061282897
+      ],
+      "size": [
+        390.7584634508639,
+        336.5781416867176
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 4
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 5,
+      "type": "LoadImage",
+      "pos": [
+        20148.474856828238,
+        -459.0037871456713
+      ],
+      "size": [
+        270,
+        314
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "7.png",
+        "image"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "LucidNFT_SM_Diffbir",
+      "pos": [
+        20255.709685162998,
+        -642.9962470598248
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cond",
+          "type": "CONDITIONING",
+          "links": [
+            1
+          ]
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LucidNFT_SM_Diffbir"
+      },
+      "widgets_values": [
+        "general_swinir_v1.ckpt",
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": 15,
+      "type": "SaveImage",
+      "pos": [
+        20919.283291341275,
+        -668.2672643549017
+      ],
+      "size": [
+        510.0970572535625,
+        527.7928232534014
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 18
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "LucidNFT_SM_Encode",
+      "pos": [
+        20586.543149530942,
+        -721.3870101383666
+      ],
+      "size": [
+        270,
+        194
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "CLIP_VISION",
+          "type": "CLIP_VISION",
+          "link": 7
+        },
+        {
+          "name": "cond",
+          "type": "CONDITIONING",
+          "link": 1
+        },
+        {
+          "name": "positive",
+          "shape": 7,
+          "type": "CONDITIONING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "condition",
+          "type": "CONDITIONING",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LucidNFT_SM_Encode"
+      },
+      "widgets_values": [
+        666,
+        "fixed",
+        "prompt_embeddings.pt",
+        "lucid_connector.pth",
+        "bf16"
+      ]
+    },
+    {
+      "id": 11,
+      "type": "LucidNFT_SM_Cond",
+      "pos": [
+        20587.598734948944,
+        -888.1163177732665
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LucidNFT_SM_Cond"
+      },
+      "widgets_values": [
+        "none",
+        1
+      ]
+    },
+    {
+      "id": 9,
+      "type": "CLIPVisionLoader",
+      "pos": [
+        20252.427585629284,
+        -748.0564176923175
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP_VISION",
+          "type": "CLIP_VISION",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPVisionLoader"
+      },
+      "widgets_values": [
+        "siglip2-so400m-patch16-512.safetensors"
+      ]
+    },
+    {
+      "id": 1,
+      "type": "LucidNFT_SM_Model",
+      "pos": [
+        20251.31899509452,
+        -919.5000944664009
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "cf_model",
+          "shape": 7,
+          "type": "MODEL",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LucidNFT_SM_Model"
+      },
+      "widgets_values": [
+        "lucidflux.pth",
+        "flux1-kj-dev-fp8.safetensors",
+        true,
+        "bf16"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "LucidNFT_SM_KSampler",
+      "pos": [
+        20911.265106758772,
+        -877.6259033105957
+      ],
+      "size": [
+        270,
+        102
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 13
+        },
+        {
+          "name": "condition",
+          "type": "CONDITIONING",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LucidNFT_SM_KSampler"
+      },
+      "widgets_values": [
+        20,
+        4
+      ]
+    },
+    {
+      "id": 14,
+      "type": "LucidNFT_SM_Decoder",
+      "pos": [
+        21221.571243688904,
+        -789.2147127320162
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 16
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LucidNFT_SM_Decoder"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAELoader",
+      "pos": [
+        21229.111072848456,
+        -892.8948232844865
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            16
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "UltraFlux.safetensors"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      4,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      2,
+      5,
+      0,
+      2,
+      0,
+      "IMAGE"
+    ],
+    [
+      4,
+      2,
+      1,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      7,
+      9,
+      0,
+      4,
+      0,
+      "CLIP_VISION"
+    ],
+    [
+      11,
+      1,
+      0,
+      11,
+      0,
+      "MODEL"
+    ],
+    [
+      13,
+      11,
+      0,
+      12,
+      0,
+      "MODEL"
+    ],
+    [
+      14,
+      4,
+      0,
+      12,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      16,
+      8,
+      0,
+      14,
+      0,
+      "VAE"
+    ],
+    [
+      17,
+      12,
+      0,
+      14,
+      1,
+      "LATENT"
+    ],
+    [
+      18,
+      14,
+      0,
+      15,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Group",
+      "bounding": [
+        20138.474856828238,
+        -993.100094466401,
+        1370.6362160202189,
+        866.9966855402896
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9229599817706415,
+      "offset": [
+        -19813.059471048415,
+        1130.7246572935774
+      ]
+    },
+    "frontendVersion": "1.41.21",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
