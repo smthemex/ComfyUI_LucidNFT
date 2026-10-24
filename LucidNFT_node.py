@@ -14,7 +14,7 @@ import folder_paths
 from typing_extensions import override
 from comfy_api.latest import ComfyExtension, io
 import nodes
-import comfy.model_management as mm
+
 from .src.flux.align_color import wavelet_reconstruction
 from torchvision.utils import save_image
 MAX_SEED = np.iinfo(np.int32).max
