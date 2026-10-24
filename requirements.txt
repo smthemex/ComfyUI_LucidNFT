@@ -1,16 +1,4 @@
-accelerate
-diffusers
+# 推理链只用到 torch + einops（ComfyUI 自带）；不再需要 diffusers /
+# transformers / peft / accelerate —— LucidNFT 的 LoRA 由本插件直接解析 PEFT 权重。
+torch
 einops
-huggingface_hub
-matplotlib
-numpy
-opencv-python
-peft
-Pillow
-requests
-safetensors
-sentencepiece
-timm
-tqdm
-transformers
-qwen-vl-utils
