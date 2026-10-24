@@ -192,7 +192,9 @@ class LucidNFTControlModel(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-# PEFT LoRA（adapter_config.json + adapter_model.safetensors）
+# PEFT LoRA —— 只处理条件分支那一支
+# DiT 的 lora_dit 目标就是主 flux DiT，已在离线转成标准 comfy LoRA 文件，
+# 由原生 LoraLoaderModelOnly 加载，本插件不参与；这里的 adapter 指 lora_condition。
 # ---------------------------------------------------------------------------
 
 _ADAPTER_WEIGHT_FILES = ("adapter_model.safetensors", "adapter_model.bin")
@@ -312,43 +314,6 @@ def merge_condition_lora(model, adapter_path, strength=1.0, verbose=True):
         raise ValueError(f"LoRA 与条件分支不匹配（0 个模块被合并）: {adapter_path}")
     del sd
     return merged
-
-
-def build_dit_lora_dict(adapter_path, verbose=True):
-    """把 PEFT adapter 的 key 改写成 comfy 通用 LoRA 格式（diffusion_model.*）。
-
-    comfy 的 LoRAAdapter 直接认 `.lora_A.weight` / `.lora_B.weight`（A=down, B=up），
-    只需要把包装前缀换成 `diffusion_model.`，并补 `{module}.alpha`（否则 alpha 缺失）。
-    """
-    sd, alpha, rank = read_peft_adapter(adapter_path, verbose=verbose)
-    lora, modules = {}, set()
-    for k, v in sd.items():
-        if k.endswith(".lora_A.weight") or k.endswith(".lora_B.weight"):
-            nk = "diffusion_model." + _strip_adapter_prefix(k)
-            lora[nk] = v
-            modules.add(nk.rsplit(".lora_", 1)[0])
-    for m in modules:
-        lora[m + ".alpha"] = torch.tensor(float(alpha))
-    if verbose:
-        logger.info("[LucidNFT] DiT LoRA: %d modules, alpha=%.1f rank=%d", len(modules), alpha, rank)
-    return lora, alpha, rank
-
-
-def apply_dit_lora(model, adapter_path, strength=1.0, verbose=True):
-    """给 comfy 的 MODEL 打 DiT LoRA（走 comfy 原生 patch，fp8/低显存都安全）。"""
-    lora, _, _ = build_dit_lora_dict(adapter_path, verbose=verbose)
-    new_model, _ = comfy.sd.load_lora_for_models(model, None, lora, strength, 0.0)
-    if verbose:
-        patched = len(getattr(new_model, "patches", {}) or {})
-        logger.info("[LucidNFT] DiT LoRA applied (strength=%.2f), patched tensors=%d", strength, patched)
-    return new_model
-
-
-def apply_plain_lora(model, lora_path, strength=1.0):
-    """给 comfy 的 MODEL 打标准 comfy 格式 LoRA（models/loras 里的 turbo lora 等）。"""
-    sd = comfy.utils.load_torch_file(lora_path, safe_load=True)
-    new_model, _ = comfy.sd.load_lora_for_models(model, None, sd, strength, 0.0)
-    return new_model
 
 
 # ---------------------------------------------------------------------------

@@ -38,14 +38,14 @@
   },
   {
    "id": 2,
-   "type": "LucidNFTLoRA",
+   "type": "LoraLoaderModelOnly",
    "pos": [
     -460,
     240
    ],
    "size": [
     330,
-    130
+    106
    ],
    "flags": {},
    "order": 1,
@@ -68,15 +68,13 @@
     }
    ],
    "properties": {
-    "Node name for S&R": "LucidNFTLoRA"
+    "Node name for S&R": "LoraLoaderModelOnly"
    },
    "widgets_values": [
-    "lora_dit",
-    1.0,
-    "none",
+    "LucidNFT_lora_dit.safetensors",
     1.0
    ],
-   "title": "2. LucidNFT DiT LoRA（lora_dit）"
+   "title": "2. LucidNFT DiT LoRA（已转成标准 comfy LoRA）"
   },
   {
    "id": 3,

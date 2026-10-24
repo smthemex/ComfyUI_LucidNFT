@@ -1,20 +1,24 @@
-"""LucidNFT 节点（ComfyUI 原生 DiT 链，6 个节点，无 PiD 后段）。
+"""LucidNFT 节点（ComfyUI 原生 DiT 链，5 个节点，无 PiD 后段）。
 
 工作流（1K 复现）：
 
-    LoadImage → LucidNFTDiffBIR ──(lq / ldr)──┐
-                                               ├→ LucidNFTCondition → LucidNFTSampler
-    （内部：prompt_embeddings.pt + lucidflux.pth（+lora_condition）+ Connector + SigLIP）
-                                                                     │
-    EmptySD3LatentImage ─────────────────────────────────────────────┤
+    UNETLoader(flux-dev) → LoraLoaderModelOnly(LucidNFT_lora_dit) ──┐
+    LoadImage → LucidNFTDiffBIR ──(lq / ldr)──┐                     │
+                                              ├→ LucidNFTCondition ┼→ LucidNFTSampler
+    （内部：prompt_embeddings.pt + lucidflux.pth + Connector + SigLIP）
+    EmptySD3LatentImage ────────────────────────────────────────────┤
     VAELoader(flux ae) → VAEDecode → LucidNFTColorAlign → SaveImage
 
-    UNETLoader(flux-dev) → LucidNFTLoRA（lora_dit）→ 上面的 model
+两个 LoRA 的分工：
+  * `lora_dit`      目标就是主 flux DiT，用 tools/convert_dit_lora.py 转成标准 comfy LoRA，
+                    由原生 LoraLoaderModelOnly 加载 —— 插件里不需要自己的 LoRA 节点；
+  * `lora_condition` 目标是条件分支（主模型里没有这些权重，做不成 LoRA），
+                    由本节点 condition_lora 下拉框在装载时合并，不落盘。
 
 出 2K（官方 UltraFlux F16 VAE）时在 VAELoader 后面多接一个 LucidNFTVAEPatch。
 
-与 ComfyUI_LucidFlux 的关系：同一条原生管线；本插件多了 LoRA（LucidNFT 的本体），
-少了 PiD 4K 解码段。文本同样直接吃官方 prompt_embeddings.pt，不加载 CLIP/T5。
+与 ComfyUI_LucidFlux 的关系：同一条原生管线，少了 PiD 4K 解码段；文本同样直接吃官方
+prompt_embeddings.pt，不加载 CLIP/T5。
 """
 import logging
 import os
@@ -190,50 +194,6 @@ def _get_clip_vision(path):
 # ---------------------------------------------------------------------------
 # 节点
 # ---------------------------------------------------------------------------
-
-class LucidNFTLoRA:
-    """LucidNFT 的 DiT LoRA（`lora_dit`，偏好优化后的 Dit 权重）+ 可选 turbo LoRA。
-
-    官方给的是 PEFT adapter 目录，key 形如
-    `base_model.model.double_blocks.0.img_attn.qkv.lora_A/B.weight`；
-    这里改写成 comfy 通用格式交给 comfy 原生 LoRA patch（fp8 / 低显存都安全）。
-    """
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "model": ("MODEL",),
-                "dit_lora": (_adapter_list("dit"),
-                             {"tooltip": "models/LucidFlux/lora_dit（PEFT adapter 目录）；none = 不打 LoRA"}),
-                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 4.0, "step": 0.05}),
-            },
-            "optional": {
-                "extra_lora": (["none"] + folder_paths.get_filename_list("loras"),
-                               {"tooltip": "可选：models/loras 里的标准 comfy LoRA（如 FLUX.1-Turbo-Alpha 加速）"}),
-                "extra_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 4.0, "step": 0.05}),
-            },
-        }
-
-    RETURN_TYPES = ("MODEL",)
-    FUNCTION = "apply"
-    CATEGORY = "LucidNFT"
-    DESCRIPTION = ("LucidNFT 的 DiT LoRA（lora_dit）。条件分支的 LoRA（lora_condition）在 "
-                   "LucidNFTCondition 里选，两边都接才是完整的 LucidNFT。")
-
-    def apply(self, model, dit_lora, strength, extra_lora="none", extra_strength=1.0):
-        path = _resolve_adapter(dit_lora)
-        if path is not None and strength > 0:
-            model = core.apply_dit_lora(model, path, strength)
-        elif dit_lora not in (None, "none"):
-            logger.warning("[LucidNFT] 没找到 adapter 目录: %s", dit_lora)
-
-        if extra_lora not in (None, "none") and extra_strength > 0:
-            p = folder_paths.get_full_path("loras", extra_lora)
-            if p:
-                model = core.apply_plain_lora(model, p, extra_strength)
-        return (model,)
-
 
 class LucidNFTDiffBIR:
     """DiffBIR 先验：SwinIR 通用复原（unshuffle 版本），在 latent 对应像素尺度上做一次“去退化”。"""
@@ -489,7 +449,6 @@ class LucidNFTColorAlign:
 
 
 NODE_CLASS_MAPPINGS = {
-    "LucidNFTLoRA": LucidNFTLoRA,
     "LucidNFTDiffBIR": LucidNFTDiffBIR,
     "LucidNFTCondition": LucidNFTCondition,
     "LucidNFTSampler": LucidNFTSampler,
@@ -498,7 +457,6 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "LucidNFTLoRA": "LucidNFT LoRA (dit)",
     "LucidNFTDiffBIR": "LucidNFT DiffBIR (SwinIR)",
     "LucidNFTCondition": "LucidNFT Condition (text+redux+control+lora)",
     "LucidNFTSampler": "LucidNFT Sampler",
