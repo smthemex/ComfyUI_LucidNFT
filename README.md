@@ -1,57 +1,110 @@
 # ComfyUI_LucidNFT
-[LucidNFT](https://github.com/W2GenAI-Lab/LucidNFT):LR-Anchored Multi-Reward Preference Optimization for Generative Real-World Super-Resolution
 
-# Update
-* 解码部分推荐用模型，comfyUI的ae解码流程（连标准vae节点时）会有一定的色差，记得给官方[LucidNFT](https://github.com/W2GenAI-Lab/LucidNFT)点星;  
-* It is recommended to use a model for the decoding part. The ae decoding process in ComfyUI (when connected to the standard VAE node) will have some color differences.Start [LucidNFT](https://github.com/W2GenAI-Lab/LucidNFT) if you like it.
+[LucidNFT](https://github.com/W2GenAI-Lab/LucidNFT)：LR-Anchored Multi-Reward Preference Optimization for Generative Real-World Super-Resolution
 
-1.Installation  
------
-  In the ./ComfyUI/custom_nodes directory, run the following:   
+> **v2：改成和 [ComfyUI_LucidFlux](https://github.com/smthemex/ComfyUI_LucidFlux) 同一条 comfy 原生管线**
+> —— 主 DiT 用 `UNETLoader` 直接吃，条件分支包成 comfy 的 `ControlBase`，
+> 采样走 comfy 原生 euler + 官方 sigma 表，VAE / LoRA / 显存管理全部交给 comfy。
+> 不再需要 `diffusers` / `transformers` / `peft` / `accelerate`，也没有 PiD 后段。
+>
+> v1 的 diffusers wrapper（`src/`、`LucidNFT_node.py`、`inference.py`、`model_loader_utils.py`）
+> 已删除，备份见 git 的 `snapshot: legacy diffusers implementation` 提交。
+
+---
+
+## 1. 安装
+
+`custom_nodes/` 下：
+
 ```
 git clone https://github.com/smthemex/ComfyUI_LucidNFT
 ```
-2.requirements  
-----
-```
-pip install -r requirements.txt
-```
 
-3.checkpoints 
-----
-* Any normal flux dit / 任意标准flux模型， KJ的或者官方封装的
-* Lucid checkpoints [links](https://huggingface.co/W2GenAI/LucidFlux/tree/main) /lucidflux.pth and prompt_embeddings.pt
-* Lucid lroa  [links](https://huggingface.co/W2GenAI/LucidNFT/tree/main)
-* Siglip512 [links](https://huggingface.co/google/siglip2-so400m-patch16-512/tree/main) / model.safetensors 只下单体模型   
-* DiffBIR [links](https://huggingface.co/lxq007/DiffBIR/tree/main)  /  general_swinir_v1.ckpt   
-* Turbo lora [links](https://huggingface.co/alimama-creative/FLUX.1-Turbo-Alpha)  #optional 可选，8 步起  
-*  Flux ae   [links](https://huggingface.co/Comfy-Org/models)   
-* Connercter [links](https://huggingface.co/smthem/LucidFLUX-connector)
+`requirements.txt` 只剩 `torch` + `einops`（ComfyUI 自带）。没有别的第三方依赖，
+不会动你环境里的 transformers / diffusers 版本。
+
+## 2. 权重
+
 ```
-├── ComfyUI/models/
-|     ├── diffusion_models/any flux dit # 任意flux dit模型 ，就用kj的或者x flux的，名字要带dev 否则跑schnell
-|     ├── vae/ae.safetensors #comfy 
-|     ├── clip_vision/siglip2-so400m-patch16-512.safetensors  #rename from model.safetensors  最好重命名个，不然都是siglip 的model.safetensors
-|     ├── LucidFlux/
-|        ├──general_swinir_v1.ckpt
-|        ├──lucidflux.pth
-|        ├──prompt_embeddings.pt # 已适配，使用时不要连clip
-|        ├──lucid_connector.pth # split from lucidflux.pth
-|        ├── lora_condition/
-|             ├──adapter_config.json
-|             ├──adapter_model.safetensors
-|        ├── lora_dit/
-|             ├──adapter_config.json
-|             ├──adapter_model.safetensors
+ComfyUI/models/
+├── diffusion_models/flux1-dev-fp8.safetensors        # 任意标准 flux DiT（推荐 fp8）
+├── vae/ae.safetensors                               # 官方 flux ae（/8）
+├── vae/UltraFlux.safetensors                        # 可选：出 2K 时用（F16 /16）
+├── clip_vision/siglip2-so400m-patch16-512.safetensors  # 建议改个名，否则都叫 model.safetensors
+└── LucidFlux/                                       # 与 ComfyUI_LucidFlux 共用同一目录
+    ├── general_swinir_v1.ckpt                       # DiffBIR 先验
+    ├── lucidflux.pth                                # 双条件分支（condition_lq/ldr + modulation）
+    ├── prompt_embeddings.pt                         # 官方预计算文本 embedding（txt 512×4096 + vec 768）
+    ├── lucid_connector.pth                          # SigLIP→4096 的 Redux 映射（也可直接给 lucidflux.pth）
+    ├── lora_dit/{adapter_config.json, adapter_model.safetensors}        # LucidNFT 的 DiT LoRA
+    └── lora_condition/{adapter_config.json, adapter_model.safetensors}  # LucidNFT 的条件分支 LoRA
 ```
 
+下载：`lucidflux.pth` / `prompt_embeddings.pt` → [W2GenAI/LucidFlux](https://huggingface.co/W2GenAI/LucidFlux/tree/main)；
+`lora_dit` / `lora_condition` → [W2GenAI/LucidNFT](https://huggingface.co/W2GenAI/LucidNFT/tree/main)；
+SigLIP → [google/siglip2-so400m-patch16-512](https://huggingface.co/google/siglip2-so400m-patch16-512/tree/main)（只下单体模型）；
+SwinIR → [lxq007/DiffBIR](https://huggingface.co/lxq007/DiffBIR/tree/main) 的 `general_swinir_v1.ckpt`；
+connector → [smthem/LucidFLUX-connector](https://huggingface.co/smthem/LucidFLUX-connector)。
 
-# 4 .Example
-![](https://github.com/smthemex/ComfyUI_LucidNFT/blob/main/example_workflows/example2.png)
-![](https://github.com/smthemex/ComfyUI_LucidNFT/blob/main/example_workflows/example.png)
+> **文本不走 CLIP/T5**：直接读官方 `prompt_embeddings.pt`（与 CLIP 推理等价），
+> 所以整条链**不要连 CLIPTextEncode / DualCLIPLoader**，省 5.4GB 权重和一次文本前向。
 
+## 3. 六个节点
 
-# 5. Citation
+| 节点 | 作用 |
+|---|---|
+| `LucidNFT LoRA (dit)` | 把 `lora_dit` 打成 comfy 原生 LoRA patch（PEFT key 自动改写）；可选再叠一个 `models/loras` 里的标准 LoRA（如 Turbo-Alpha 加速） |
+| `LucidNFT DiffBIR (SwinIR)` | SwinIR 通用复原，输出 `ldr`（复原图）+ `lq`（缩放后的输入），两者都是 latent×8 |
+| `LucidNFT Condition` | 文本 pt + SigLIP→Redux(1024 token) + 双条件分支（含 `lora_condition`）+ guidance，一条 CONDITIONING 输出 |
+| `LucidNFT Sampler` | 官方 `get_schedule` 的精确 sigma 表 + comfy 原生 euler（cfg=1.0） |
+| `LucidNFT VAE Patch (F16)` | 只有用 `UltraFlux` VAE 出 2K 时才接；用 flux ae 时不要接 |
+| `LucidNFT Color Align` | wavelet 颜色对齐（reference 接 `ldr`） |
+
+## 4. 工作流
+
+`example_workflows/`
+
+* `lucidnft_1k_comfy_core.json` — 11 节点 / 12 连线，latent 128 → **1024²**（flux ae）
+* `lucidnft_2k_comfy_core.json` — 12 节点 / 13 连线，latent 128 → **2048²**（UltraFlux + F16 补丁）
+
+```
+UNETLoader(flux1-dev) → LucidNFTLoRA(lora_dit) ────────────────────┐
+LoadImage → LucidNFTDiffBIR(填 1024 = latent×8) ──lq/ldr──┐        │
+                                                          ├→ LucidNFTCondition → LucidNFTSampler
+EmptySD3LatentImage(1024 → latent 128) ───────────────────┘        │
+VAELoader(ae) → VAEDecode → LucidNFTColorAlign(reference=ldr) → SaveImage
+```
+
+* `EmptySD3LatentImage` 填的是**像素**尺寸（内部 /8）：要 latent 128 就填 1024。
+* `LucidNFTDiffBIR` 的 width/height 填 **latent×8**（latent 128 → 1024），也就是分支条件图的尺寸。
+* 出 2K：VAE 换 `UltraFlux.safetensors` 并在 VAELoader 后接 `LucidNFTVAEPatch`，同一 latent 解出 2048²。
+
+## 5. 参数
+
+| 参数 | 建议 |
+|---|---|
+| steps | 官方 24（dev、无加速 lora）；接 Turbo-Alpha 可 4~8 |
+| guidance | 4.0（在 `LucidNFTCondition` 里，不在 Sampler） |
+| cfg | **恒 1.0**（flux-dev 是 guidance 蒸馏模型，不要 CFG） |
+| shift | flux-dev 开；flux-schnell 关 |
+| dtype | bf16（12GB 卡也可跑） |
+| lora_strength | 1.0；想更“贴原图”可降到 0.6~0.8 |
+
+实测（RTX 4070 12GB，flux1-dev-fp8 + bf16 分支 + 两个 LoRA，1024²）：
+20 步 **52s**（≈2.4s/step），峰值显存 **8.2GB**；VAE 解码 0.6s。
+同 seed 下开/关 LoRA 的输出差异 mean|Δ|≈4.2/255（LoRA 生效，画质细节取向变化）。
+
+## 6. 原生链顺手解决的问题
+
+| 老问题（v1） | 现在 |
+|---|---|
+| 接标准 VAE 节点有**色差**（v1 手动 `x/0.3611+0.1159` 再 decode） | latent 语义交给 comfy，`VAEDecode` 直接出正确颜色；`LucidNFTColorAlign` 只做 wavelet 高频/低频融合 |
+| 自带采样循环，vram / offload 自己管 | 官方 sigma 表 + `comfy.sample.sample_custom`，显存交给 comfy（`ControlBase.get_models()` 注册 patcher） |
+| 8 个节点、接线容易顺序错（LoRA 与 conditioning 顺序、SigLIP 连接器分开） | 6 个节点，pt/分支/connector/SigLIP 都在 Condition 里，只连 lq/ldr 两根线 |
+| 依赖 diffusers/transformers/peft，transformers 升级就整插件消失 | 只依赖 torch + einops |
+
+## 7. Citation
+
 ```
 @article{fei2026lucidnft,
   title={LucidNFT: LR-Anchored Multi-Reward Preference Optimization for Generative Real-World Super-Resolution},
@@ -59,4 +112,6 @@ pip install -r requirements.txt
   journal={arXiv preprint arXiv:2603.05947},
   year={2026}
 }
-``
+```
+
+原项目：[W2GenAI-Lab/LucidNFT](https://github.com/W2GenAI-Lab/LucidNFT) — 觉得有用请给官方点星。

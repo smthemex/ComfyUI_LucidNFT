@@ -1,0 +1,625 @@
+{
+ "last_node_id": 12,
+ "last_link_id": 13,
+ "nodes": [
+  {
+   "id": 1,
+   "type": "UNETLoader",
+   "pos": [
+    -460,
+    120
+   ],
+   "size": [
+    330,
+    82
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      1
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "UNETLoader"
+   },
+   "widgets_values": [
+    "flux1-dev-fp8.safetensors",
+    "default"
+   ],
+   "title": "1. flux1-dev（comfy 原生 DiT）"
+  },
+  {
+   "id": 2,
+   "type": "LucidNFTLoRA",
+   "pos": [
+    -460,
+    240
+   ],
+   "size": [
+    330,
+    130
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      2
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LucidNFTLoRA"
+   },
+   "widgets_values": [
+    "lora_dit",
+    1.0,
+    "none",
+    1.0
+   ],
+   "title": "2. LucidNFT DiT LoRA（lora_dit）"
+  },
+  {
+   "id": 3,
+   "type": "LoadImage",
+   "pos": [
+    -460,
+    410
+   ],
+   "size": [
+    340,
+    420
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      3
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "links": [],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "7.png",
+    "image"
+   ]
+  },
+  {
+   "id": 4,
+   "type": "LucidNFTDiffBIR",
+   "pos": [
+    -460,
+    880
+   ],
+   "size": [
+    340,
+    130
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 3
+    }
+   ],
+   "outputs": [
+    {
+     "name": "ldr",
+     "type": "IMAGE",
+     "links": [
+      5,
+      10
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "lq",
+     "type": "IMAGE",
+     "links": [
+      4
+     ],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LucidNFTDiffBIR"
+   },
+   "widgets_values": [
+    "general_swinir_v1.ckpt",
+    1024,
+    1024
+   ],
+   "title": "3. DiffBIR：SwinIR 先验（latent×8 尺度）"
+  },
+  {
+   "id": 5,
+   "type": "LucidNFTCondition",
+   "pos": [
+    60,
+    850
+   ],
+   "size": [
+    400,
+    260
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "lq",
+     "type": "IMAGE",
+     "link": 4
+    },
+    {
+     "name": "ldr",
+     "type": "IMAGE",
+     "link": 5
+    },
+    {
+     "name": "clip_vision",
+     "type": "CLIP_VISION",
+     "link": null
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONDITIONING",
+     "type": "CONDITIONING",
+     "links": [
+      6
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LucidNFTCondition"
+   },
+   "widgets_values": [
+    "lucidflux.pth",
+    "lora_condition",
+    1.0,
+    "prompt_embeddings.pt",
+    "lucid_connector.pth",
+    "siglip2-so400m-patch16-512.safetensors",
+    4.0,
+    "bf16"
+   ],
+   "title": "4. 文本(pt)+Redux+双条件分支(+lora_condition)"
+  },
+  {
+   "id": 6,
+   "type": "EmptySD3LatentImage",
+   "pos": [
+    60,
+    1160
+   ],
+   "size": [
+    400,
+    106
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      7
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "EmptySD3LatentImage"
+   },
+   "widgets_values": [
+    1024,
+    1024,
+    1
+   ],
+   "title": "latent 128（填 1024 像素）→ 2048 (F16 VAE)"
+  },
+  {
+   "id": 7,
+   "type": "LucidNFTSampler",
+   "pos": [
+    520,
+    850
+   ],
+   "size": [
+    330,
+    190
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 2
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 6
+    },
+    {
+     "name": "latent",
+     "type": "LATENT",
+     "link": 7
+    },
+    {
+     "name": "noise",
+     "type": "LATENT",
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      8
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LucidNFTSampler"
+   },
+   "widgets_values": [
+    20,
+    123456789,
+    1.0,
+    true
+   ],
+   "title": "5. 官方 sigma 表 + comfy euler（cfg=1.0）"
+  },
+  {
+   "id": 8,
+   "type": "VAELoader",
+   "pos": [
+    520,
+    1090
+   ],
+   "size": [
+    330,
+    60
+   ],
+   "flags": {},
+   "order": 7,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      12
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAELoader"
+   },
+   "widgets_values": [
+    "UltraFlux.safetensors"
+   ]
+  },
+  {
+   "id": 9,
+   "type": "VAEDecode",
+   "pos": [
+    910,
+    850
+   ],
+   "size": [
+    240,
+    46
+   ],
+   "flags": {},
+   "order": 8,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 8
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 13
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      9
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEDecode"
+   },
+   "widgets_values": []
+  },
+  {
+   "id": 10,
+   "type": "LucidNFTColorAlign",
+   "pos": [
+    910,
+    950
+   ],
+   "size": [
+    300,
+    110
+   ],
+   "flags": {},
+   "order": 9,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 9
+    },
+    {
+     "name": "reference",
+     "type": "IMAGE",
+     "link": 10
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      11
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LucidNFTColorAlign"
+   },
+   "widgets_values": [
+    1.0
+   ],
+   "title": "6. wavelet 颜色对齐"
+  },
+  {
+   "id": 11,
+   "type": "SaveImage",
+   "pos": [
+    1260,
+    850
+   ],
+   "size": [
+    420,
+    400
+   ],
+   "flags": {},
+   "order": 10,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "link": 11
+    }
+   ],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "SaveImage"
+   },
+   "widgets_values": [
+    "LucidNFT_2K"
+   ]
+  },
+  {
+   "id": 12,
+   "type": "LucidNFTVAEPatch",
+   "pos": [
+    520,
+    1200
+   ],
+   "size": [
+    330,
+    40
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 12
+    }
+   ],
+   "outputs": [
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      13
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LucidNFTVAEPatch"
+   },
+   "widgets_values": [],
+   "title": "1. F16 VAE 补丁（UltraFlux 必接）"
+  }
+ ],
+ "links": [
+  [
+   1,
+   1,
+   0,
+   2,
+   0,
+   "MODEL"
+  ],
+  [
+   2,
+   2,
+   0,
+   7,
+   0,
+   "MODEL"
+  ],
+  [
+   3,
+   3,
+   0,
+   4,
+   0,
+   "IMAGE"
+  ],
+  [
+   4,
+   4,
+   1,
+   5,
+   0,
+   "IMAGE"
+  ],
+  [
+   5,
+   4,
+   0,
+   5,
+   1,
+   "IMAGE"
+  ],
+  [
+   6,
+   5,
+   0,
+   7,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   7,
+   6,
+   0,
+   7,
+   2,
+   "LATENT"
+  ],
+  [
+   8,
+   7,
+   0,
+   9,
+   0,
+   "LATENT"
+  ],
+  [
+   9,
+   9,
+   0,
+   10,
+   0,
+   "IMAGE"
+  ],
+  [
+   10,
+   4,
+   0,
+   10,
+   1,
+   "IMAGE"
+  ],
+  [
+   11,
+   10,
+   0,
+   11,
+   0,
+   "IMAGE"
+  ],
+  [
+   12,
+   8,
+   0,
+   12,
+   0,
+   "VAE"
+  ],
+  [
+   13,
+   12,
+   0,
+   9,
+   1,
+   "VAE"
+  ]
+ ],
+ "groups": [],
+ "config": {},
+ "extra": {
+  "ds": {
+   "scale": 0.9,
+   "offset": [
+    60,
+    40
+   ]
+  }
+ },
+ "version": 0.4
+}

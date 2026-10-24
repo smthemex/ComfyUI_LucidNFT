@@ -1,3 +1,10 @@
+"""SwinIR（DiffBIR 先验）— 从 LucidNFT 官方 src/flux/swinir.py 精简（v1 目录已删除，本文件即唯一副本）。
+
+改动仅两处：
+  * timm 的 DropPath / to_2tuple / trunc_normal_ 本地化 → 依赖只剩 torch + einops；
+  * 去掉未使用的 torch.optim 导入。
+模型结构与权重键名保持原样（general_swinir_v1.ckpt，sf=8 + unshuffle_scale=8）。
+"""
 # -----------------------------------------------------------------------------------
 # SwinIR: Image Restoration Using Swin Transformer, https://arxiv.org/abs/2108.10257
 # Originally Written by Ze Liu, Modified by Jingyun Liang.
@@ -6,15 +13,37 @@
 # Originally borrowed from DifFace (https://github.com/zsyOAOA/DifFace/blob/master/models/swinir.py)
 
 import math
+import os
 from typing import Any, Dict, Set
 
 import torch
 import torch.nn as nn
-from torch import optim
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
+# ---- timm 依赖本地化（原文件用 timm 的 3 个工具；避免为此拉 timm/torchvision）----
+
+
+def to_2tuple(x):
+    if isinstance(x, (tuple, list)):
+        return tuple(x)
+    return (x, x)
+
+
+def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
+    return torch.nn.init.trunc_normal_(tensor, mean=mean, std=std, a=a, b=b)
+
+
+class DropPath(nn.Module):
+    """推理期为恒等（drop_path_rate 只在训练时生效）。"""
+
+    def __init__(self, drop_prob: float = 0.0):
+        super().__init__()
+        self.drop_prob = float(drop_prob)
+
+    def forward(self, x):
+        return x
+
 from einops import rearrange
 
 class Mlp(nn.Module):
@@ -909,3 +938,44 @@ class SwinIR(nn.Module):
         flops += H * W * 3 * self.embed_dim * self.embed_dim
         flops += self.upsample.flops()
         return flops
+
+# ---------------------------------------------------------------------------
+# 装载 / 缓存
+# ---------------------------------------------------------------------------
+
+_SWINIR_CACHE = {}
+
+
+@torch.no_grad()
+def load_swinir(ckpt_path, device="cpu"):
+    """按官方参数构建 SwinIR 并加载 general_swinir_v1.ckpt（fp32）。"""
+    if ckpt_path is None:
+        raise ValueError("SwinIR 权重路径为空（models/LucidFlux/general_swinir_v1.ckpt）")
+    key = os.path.abspath(ckpt_path)
+    model = _SWINIR_CACHE.get(key)
+    if model is None:
+        model = SwinIR(
+            img_size=64,
+            patch_size=1,
+            in_chans=3,
+            embed_dim=180,
+            depths=[6, 6, 6, 6, 6, 6, 6, 6],
+            num_heads=[6, 6, 6, 6, 6, 6, 6, 6],
+            window_size=8,
+            mlp_ratio=2,
+            sf=8,
+            img_range=1.0,
+            upsampler="nearest+conv",
+            resi_connection="1conv",
+            unshuffle=True,
+            unshuffle_scale=8,
+        )
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        state = ckpt.get("state_dict", ckpt)
+        state = {k.replace("module.", ""): v for k, v in state.items()}
+        model.load_state_dict(state, strict=True)
+        model.eval()
+        for p in model.parameters():
+            p.requires_grad_(False)
+        _SWINIR_CACHE[key] = model
+    return model
